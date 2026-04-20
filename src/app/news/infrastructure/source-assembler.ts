@@ -1,5 +1,5 @@
 import { LogoDevApi } from '../../shared/infrastructure/logo-dev-api';
-import { SourceResource } from './sources-response';
+import { SourceResource, SourcesResponse } from './sources-response';
 import { Source } from '../domain/model/source.entity';
 
 export class SourceAssembler {
@@ -17,5 +17,9 @@ export class SourceAssembler {
       url: resource.url || '',
       urlToLogo: this.logoApi.getUrlToLogo(resource.url || ''),
     }
+  }
+
+  static toEntitiesFromResponse(response: SourcesResponse): Source[] {
+    return response.sources.map((source) => this.toEntityFromResource(source));
   }
 }
