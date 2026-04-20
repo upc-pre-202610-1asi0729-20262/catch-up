@@ -6,8 +6,10 @@ import { environment } from '../../../environments/environment';
 })
 export class LogoDevApi {
   baseUrl = environment.logoProviderApiBaseUrl;
-  apKey = environment.logoProviderPublishableKey;
+  apiKey = environment.logoProviderPublishableKey;
 
   constructor() {}
-  // TODO: Implement getUrlToLogo(source: Source)
+  getUrlToLogo(domain: string): string {
+    return `${this.baseUrl}${new URL(domain).hostname}?token=${this.apiKey}`;
+  }
 }
