@@ -1,5 +1,9 @@
 export const environment = {
   production: false,
+  newsProviderApiBaseUrl: 'https://newsapi.org/v2',
+  newsProviderNewsEndpointPath: '/top-headlines',
+  newsProviderSourcesEndpointPath: '/sources',
+  newsProviderApiKey: 'place-your-key-here',
   logoProviderApiBaseUrl: 'https://img.logo.dev/',
-  logoProviderPublishableKey: 'pk_H1j_uA9GRFizL2ikMw4qwQ',
+  logoProviderPublishableKey: 'place-your-key-here',
 };
