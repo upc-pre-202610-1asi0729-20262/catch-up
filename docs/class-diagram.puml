@@ -1,0 +1,164 @@
+@startuml
+
+package "app" {
+  class App <<component>> {
+    title: Signal<string>
+  }
+}
+
+package "news.application" {
+  class NewsStore {
+    - sourcesSignal: Signal<Source[]>
+    - articlesSignal: Signal<Record<string, Article[]>>
+    - newsApi: NewsApi
+    - logoApi: LogoDevApi
+    + sources: Signal<Source[]>
+    + articles: Signal<Record<string, Article[]>>
+    + currentSourceArticles: Signal<Article[]>
+    - _currentSource: Source
+    + loadSources()
+    + loadArticlesForCurrentSource()
+    + get currentSource(): Source
+    + set currentSource(Source)
+  }
+}
+
+package "news.domain.model" {
+  class Article {
+    title: string
+    description: string
+    url: string
+    urlToImage: string
+    publishedAt: string
+    source: Source
+  }
+  class Source {
+    id: string
+    name: string
+    url: string
+    urlToLogo: string
+  }
+}
+
+package "news.infrastructure" {
+  class NewsApi {
+    - baseUrl: string
+    - newsEndpoint: string
+    - sourcesEndpoint: string
+    - apiKey: string
+    - http: HttpClient
+    - logoApi: LogoDevApi
+    + getSources(): Observable<Source[]>
+    + getArticlesBySourceId(sourceId: string): Observable<Article[]>
+  }
+  class ArticleAssembler {
+    + withLogoApi(logoApi: LogoDevApi)
+    + toEntityFromResource(resource: ArticleResource): Article
+    + toEntitiesFromResponse(response: TopHeadlinesResponse): Article[]
+  }
+  class SourceAssembler {
+    + withLogoApi(logoApi: LogoDevApi)
+    + toEntityFromResource(resource: SourceResource): Source
+    + toEntitiesFromResponse(response: SourcesResponse): Source[]
+  }
+  interface TopHeadlinesResponse {
+    status: string
+    totalResults: number
+    articles: ArticleResource[]
+  }
+  interface ArticleResource {
+    source: { id: string | null; name: string }
+    title: string
+    description: string | null
+    url: string
+    urlToImage: string | null
+    publishedAt: string
+  }
+  interface SourcesResponse {
+    status: string
+    sources: SourceResource[]
+  }
+  interface SourceResource {
+    id: string
+    name: string
+    url: string
+    urlToLogo: string
+  }
+}
+
+package "news.presentation.components" {
+  class ArticleItem <<component>> {
+    article: Article (input)
+    + shareArticle()
+  }
+  class ArticleList <<component>> {
+    articles: Article[] (input)
+  }
+  class SourceItem <<component>> {
+    source: Source (input)
+    sourceSelected: Source (output)
+    + emitSourceSelectedEvent()
+  }
+  class SourceList <<component>> {
+    sources: Source[] (input)
+    sourceSelected: Source (output)
+    + emitSourceSelectedEvent(source: Source)
+  }
+}
+
+package "shared.infrastructure" {
+  class LogoDevApi {
+    baseUrl: string
+    + getUrlToLogo(domain: string)
+  }
+}
+
+package "shared.presentation.components" {
+  class Layout <<component>> {
+    store: NewsStore
+    sources: Signal<Source[]>
+    articles: Signal<Article[]>
+    + ngOnInit()
+    + updateArticlesBySource(source: Source)
+  }
+  class LanguageSwitcher <<component>> {
+    currentLang: string
+    languages: string[]
+    + useLanguage(language: string)
+  }
+  class Footer <<component>> {
+  }
+}
+
+' Relationships
+App --> Layout : «composes»
+Layout --> SourceList : «composes»
+Layout --> ArticleList : «composes»
+Layout --> LanguageSwitcher : «composes»
+Layout --> Footer : «composes»
+SourceList --> SourceItem : «composes»
+ArticleList --> ArticleItem : «composes»
+NewsStore --> NewsApi : «uses»
+NewsStore --> LogoDevApi : «uses»
+NewsStore --> Source : «uses»
+NewsStore --> Article : «uses»
+NewsApi --> SourceAssembler : «uses»
+NewsApi --> ArticleAssembler : «uses»
+NewsApi --> LogoDevApi : «uses»
+NewsApi --> Source : «uses»
+NewsApi --> Article : «uses»
+ArticleAssembler --> Article : «creates»
+ArticleAssembler ..> ArticleResource : «transforms»
+ArticleAssembler ..> TopHeadlinesResponse : «transforms»
+SourceAssembler --> Source : «creates»
+SourceAssembler ..> SourceResource : «transforms»
+SourceAssembler ..> SourcesResponse : «transforms»
+ArticleItem --> Article : «input»
+ArticleList --> Article : «input»
+SourceItem --> Source : «input»
+SourceList --> Source : «input»
+Layout --> NewsStore : «uses»
+Layout --> Source : «uses»
+Layout --> Article : «uses»
+
+@enduml
