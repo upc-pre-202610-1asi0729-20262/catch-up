@@ -7,6 +7,7 @@ export class ArticleAssembler {
 
   static withLogoApi(logoApi: LogoDevApi) {
     this.logoApi = logoApi;
+    return this;
   }
 
   static toEntityFromResource(resource: ArticleResource): Article {
