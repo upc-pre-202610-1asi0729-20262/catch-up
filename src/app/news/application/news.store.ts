@@ -4,35 +4,101 @@ import {Article} from '../domain/model/article.entity';
 import {NewsApi} from '../infrastructure/news-api';
 import {LogoDevApi} from '../../shared/infrastructure/logo-dev-api';
 
-@Injectable({providedIn: 'root'})
 /**
- * Application service that coordinates read models for the News bounded context.
+ * Application store coordinating the News bounded context.
  *
  * @remarks
- * This store owns source and article state and exposes it through Angular signals
- * consumed by presentation components.
+ * This injectable service implements the application layer of the news feature,
+ * following DDD principles. It manages the read models for sources and articles,
+ * maintains state through Angular signals, and coordinates with infrastructure
+ * services to fetch and cache data. The store exposes reactive projections that
+ * presentation components consume.
+ *
+ * The store is responsible for:
+ * - Loading and caching news sources
+ * - Loading and caching articles per source
+ * - Managing current source selection as the navigation focus
+ * - Enriching domain entities with external resources (logos)
+ *
+ * @example
+ * ```typescript
+ * constructor(private store: NewsStore) {
+ *   this.sources$ = this.store.sources;
+ *   this.articles$ = this.store.currentSourceArticles;
+ * }
+ *
+ * ngOnInit() {
+ *   this.store.loadSources();
+ * }
+ * ```
  */
+@Injectable({providedIn: 'root'})
 export class NewsStore {
 
-
-  /** Internal signal containing all available sources. */
+  /** Internal mutable signal containing all available news sources. */
   private sourcesSignal = signal<Source[]>([]);
-  /** Internal signal indexed by source id with preloaded article lists. */
+
+  /** Internal mutable signal holding cached articles indexed by source ID. */
   private articlesSignal = signal<Record<string, Article[]>>({});
+
+  /** Injected infrastructure gateway for news provider API. */
   private newsApi = inject(NewsApi);
+
+  /** Injected infrastructure service for logo URL generation. */
   private logoApi = inject(LogoDevApi);
 
-  /** Read-only projection of available news sources. */
+  /**
+   * Computed read-only projection of all available news sources.
+   *
+   * @remarks
+   * This reactive signal is consumed by presentation components that need
+   * to display the list of available sources for navigation purposes.
+   */
   readonly sources = computed(() => this.sourcesSignal());
-  /** Read-only projection of the article cache keyed by source id. */
+
+  /**
+   * Computed read-only projection of the article cache indexed by source ID.
+   *
+   * @remarks
+   * The cache stores articles keyed by their source ID, enabling efficient
+   * retrieval and reuse of previously fetched article lists.
+   */
   readonly articles = computed(() => this.articlesSignal());
-  /** Reactive list of articles for the currently selected source. */
+
+  /**
+   * Computed reactive list of articles for the currently selected source.
+   *
+   * @remarks
+   * This signal is derived from the current source selection and the article
+   * cache. It automatically updates when either the current source changes
+   * or the article cache is modified.
+   */
   public currentSourceArticles = computed(() => this.articlesSignal()[this.currentSource?.id] ?? []);
-  /** Currently selected source used as aggregate navigation focus. */
+
+  /**
+   * Internal reference to the currently selected source.
+   *
+   * @remarks
+   * This property acts as the aggregate navigation focus within the News
+   * bounded context. When updated, it triggers article loading for that source.
+   */
   private _currentSource!: Source;
 
   /**
-   * Loads available sources once and initializes the current source selection.
+   * Loads available news sources once from the API and initializes source selection.
+   *
+   * @remarks
+   * This method implements lazy-loading caching. Sources are fetched only once.
+   * After loading, it enriches each source with logo URLs via the LogoDevApi
+   * and automatically selects the first source as the initial navigation focus.
+   * Article loading for the selected source is triggered immediately.
+   *
+   * @example
+   * ```typescript
+   * ngAfterViewInit() {
+   *   this.store.loadSources();
+   * }
+   * ```
    */
   loadSources() {
     if (this.sourcesSignal().length === 0) {
@@ -46,7 +112,19 @@ export class NewsStore {
   }
 
   /**
-   * Loads articles for the selected source when they are not already cached.
+   * Loads articles for the currently selected source if not already cached.
+   *
+   * @remarks
+   * This method implements cache-aware loading. If articles for the current
+   * source have already been loaded and cached, the request is skipped.
+   * Upon loading, it enriches each article with the source's logo URL and
+   * website URL for presentation purposes.
+   *
+   * @example
+   * ```typescript
+   * this.store.currentSource = newSource;
+   * this.store.loadArticlesForCurrentSource();
+   * ```
    */
   loadArticlesForCurrentSource() {
     console.log(this.currentSource);
@@ -63,13 +141,28 @@ export class NewsStore {
     }
   }
 
-  /** Gets the currently selected source. */
+  /**
+   * Gets the currently selected source.
+   *
+   * @returns The Source entity representing the current navigation focus.
+   */
   get currentSource(): Source {
     return this._currentSource;
   }
 
   /**
-   * Updates the current source and triggers article loading for that source.
+   * Sets the currently selected source and triggers article loading for that source.
+   *
+   * @param value - The new source to select as the navigation focus.
+   *
+   * @remarks
+   * This setter updates the current source selection and immediately initiates
+   * article loading for the newly selected source (unless already cached).
+   *
+   * @example
+   * ```typescript
+   * this.store.currentSource = selectedSource;
+   * ```
    */
   set currentSource(value: Source) {
     this._currentSource = value;
