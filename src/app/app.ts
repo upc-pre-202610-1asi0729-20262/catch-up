@@ -8,5 +8,5 @@ import { Layout } from './shared/presentation/components/layout/layout';
   styleUrl: './app.css',
 })
 export class App {
-  protected readonly title = signal('catch-up');
+  protected readonly title = signal('CatchUp');
 }
